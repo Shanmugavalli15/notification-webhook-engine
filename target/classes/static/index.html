@@ -1,0 +1,820 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Distributed Notification & Webhook Engine</title>
+    <!-- Google Fonts: Outfit and Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --bg-color: #0b0f19;
+            --card-bg: rgba(17, 24, 39, 0.7);
+            --card-border: rgba(255, 255, 255, 0.06);
+            --text-primary: #f3f4f6;
+            --text-secondary: #9ca3af;
+            --text-muted: #6b7280;
+            --primary-grad: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+            --accent-blue: #3b82f6;
+            --accent-green: #10b981;
+            --accent-orange: #f59e0b;
+            --accent-red: #ef4444;
+            --font-display: 'Outfit', sans-serif;
+            --font-sans: 'Inter', sans-serif;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            font-family: var(--font-sans);
+            min-height: 100vh;
+            padding: 2rem 1.5rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            overflow-x: hidden;
+            background-image: 
+                radial-gradient(at 10% 20%, rgba(99, 102, 241, 0.15) 0px, transparent 50%),
+                radial-gradient(at 90% 80%, rgba(168, 85, 247, 0.15) 0px, transparent 50%);
+            background-attachment: fixed;
+        }
+
+        header {
+            width: 100%;
+            max-width: 1200px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2.5rem;
+        }
+
+        .logo-section h1 {
+            font-family: var(--font-display);
+            font-size: 1.8rem;
+            font-weight: 700;
+            background: var(--primary-grad);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: -0.5px;
+        }
+
+        .logo-section p {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            margin-top: 0.25rem;
+        }
+
+        .connection-status {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: rgba(30, 41, 59, 0.5);
+            border: 1px solid var(--card-border);
+            padding: 0.5rem 1rem;
+            border-radius: 9999px;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: var(--accent-green);
+            box-shadow: 0 0 10px var(--accent-green);
+            animation: pulse-dot 2s infinite;
+        }
+
+        @keyframes pulse-dot {
+            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+            70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
+            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+        }
+
+        main {
+            width: 100%;
+            max-width: 1200px;
+            display: grid;
+            grid-template-columns: 350px 1fr;
+            gap: 2rem;
+        }
+
+        @media (max-width: 900px) {
+            main {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .panel {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 16px;
+            padding: 1.5rem;
+            backdrop-filter: blur(16px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+            display: flex;
+            flex-direction: column;
+            gap: 1.25rem;
+        }
+
+        .panel-title {
+            font-family: var(--font-display);
+            font-size: 1.2rem;
+            font-weight: 600;
+            border-bottom: 1px solid var(--card-border);
+            padding-bottom: 0.75rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        label {
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: var(--text-secondary);
+        }
+
+        input, select, textarea {
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid var(--card-border);
+            border-radius: 8px;
+            padding: 0.75rem 1rem;
+            color: var(--text-primary);
+            font-family: var(--font-sans);
+            font-size: 0.9rem;
+            outline: none;
+            transition: all 0.2s ease;
+            width: 100%;
+        }
+
+        input:focus, select:focus, textarea:focus {
+            border-color: #a855f7;
+            box-shadow: 0 0 0 2px rgba(168, 85, 247, 0.2);
+            background: rgba(15, 23, 42, 0.8);
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 120px;
+        }
+
+        .templates-label {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            margin-top: 0.5rem;
+            margin-bottom: 0.25rem;
+        }
+
+        .template-buttons {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 0.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .btn-template {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--card-border);
+            color: var(--text-secondary);
+            padding: 0.4rem 0.5rem;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-align: center;
+        }
+
+        .btn-template:hover {
+            background: rgba(168, 85, 247, 0.15);
+            color: #d8b4fe;
+            border-color: rgba(168, 85, 247, 0.3);
+        }
+
+        .btn-primary {
+            background: var(--primary-grad);
+            border: none;
+            color: white;
+            font-family: var(--font-display);
+            font-weight: 600;
+            padding: 0.85rem;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 0.5rem;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 0.5rem;
+            box-shadow: 0 4px 12px rgba(124, 58, 237, 0.3);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 20px rgba(124, 58, 237, 0.55);
+        }
+
+        .btn-primary:active {
+            transform: translateY(1px);
+        }
+
+        /* Right Panel & Table */
+        .dashboard-container {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .table-wrapper {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+            backdrop-filter: blur(16px);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+            font-size: 0.9rem;
+        }
+
+        th {
+            background: rgba(15, 23, 42, 0.4);
+            font-family: var(--font-display);
+            font-weight: 600;
+            color: var(--text-secondary);
+            padding: 1rem 1.25rem;
+            border-bottom: 1px solid var(--card-border);
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        td {
+            padding: 1rem 1.25rem;
+            border-bottom: 1px solid var(--card-border);
+            vertical-align: middle;
+            color: var(--text-primary);
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        .row-main {
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+        }
+
+        .row-main:hover {
+            background-color: rgba(255, 255, 255, 0.02);
+        }
+
+        /* Status Badges */
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            padding: 0.25rem 0.65rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .badge-pending {
+            background-color: rgba(59, 130, 246, 0.15);
+            color: #93c5fd;
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            animation: pulse-blue 1.5s infinite;
+        }
+
+        .badge-retrying {
+            background-color: rgba(245, 158, 11, 0.15);
+            color: #fde047;
+            border: 1px solid rgba(245, 158, 11, 0.3);
+            animation: pulse-yellow 1.5s infinite;
+        }
+
+        .badge-delivered {
+            background-color: rgba(16, 185, 129, 0.15);
+            color: #a7f3d0;
+            border: 1px solid rgba(16, 185, 129, 0.3);
+        }
+
+        .badge-failed_dlq {
+            background-color: rgba(239, 68, 68, 0.15);
+            color: #fca5a5;
+            border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+
+        .badge-channel {
+            background-color: rgba(255, 255, 255, 0.05);
+            color: var(--text-secondary);
+            border: 1px solid var(--card-border);
+            border-radius: 6px;
+            padding: 0.15rem 0.4rem;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+
+        @keyframes pulse-blue {
+            0% { opacity: 0.8; }
+            50% { opacity: 1; filter: brightness(1.2); }
+            100% { opacity: 0.8; }
+        }
+
+        @keyframes pulse-yellow {
+            0% { opacity: 0.8; }
+            50% { opacity: 1; filter: brightness(1.25); }
+            100% { opacity: 0.8; }
+        }
+
+        .expand-icon {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            transition: transform 0.2s ease;
+        }
+
+        .expanded .expand-icon {
+            transform: rotate(90deg);
+        }
+
+        /* Nested details style */
+        .row-details {
+            background: rgba(15, 23, 42, 0.3);
+            display: none;
+        }
+
+        .row-details.show {
+            display: table-row;
+        }
+
+        .logs-container {
+            padding: 1rem 1.5rem;
+            border-left: 2px solid #8b5cf6;
+            margin: 0.25rem 0;
+        }
+
+        .logs-title {
+            font-family: var(--font-display);
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: #d8b4fe;
+            margin-bottom: 0.75rem;
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        .log-timeline {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            font-size: 0.8rem;
+        }
+
+        .log-item {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid var(--card-border);
+            border-radius: 8px;
+            padding: 0.75rem;
+            position: relative;
+        }
+
+        .log-meta {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 0.35rem;
+            font-size: 0.75rem;
+        }
+
+        .log-attempt {
+            color: #a855f7;
+            font-weight: 600;
+        }
+
+        .log-status {
+            padding: 0.05rem 0.3rem;
+            border-radius: 4px;
+            font-weight: 600;
+        }
+
+        .log-status.success {
+            background: rgba(16, 185, 129, 0.1);
+            color: #34d399;
+        }
+
+        .log-status.fail {
+            background: rgba(239, 68, 68, 0.1);
+            color: #f87171;
+        }
+
+        .log-body {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 4px;
+            padding: 0.5rem;
+            font-family: monospace;
+            color: #c084fc;
+            white-space: pre-wrap;
+            word-break: break-all;
+            margin-top: 0.4rem;
+            border: 1px solid rgba(255, 255, 255, 0.02);
+        }
+
+        .log-time {
+            color: var(--text-muted);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 3rem 2rem;
+            color: var(--text-muted);
+            font-family: var(--font-display);
+            font-size: 1rem;
+        }
+
+        .recipient-cell {
+            max-width: 200px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .payload-cell {
+            max-width: 250px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            font-family: monospace;
+            color: #c084fc;
+        }
+        
+        .toast-notification {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            background: rgba(30, 41, 59, 0.9);
+            border: 1px solid rgba(139, 92, 246, 0.3);
+            border-radius: 12px;
+            padding: 1rem 1.5rem;
+            color: var(--text-primary);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(10px);
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            transform: translateY(150%);
+            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        
+        .toast-notification.show {
+            transform: translateY(0);
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="logo-section">
+            <h1>Notification &amp; Webhook Engine</h1>
+            <p>High-Throughput Asynchronous Delivery &amp; Backoff Retry Monitor</p>
+        </div>
+        <div class="connection-status">
+            <span class="status-dot"></span>
+            <span>Auto-polling (3s)</span>
+        </div>
+    </header>
+
+    <main>
+        <!-- Left Column: Notification Creator Form -->
+        <section class="panel">
+            <h2 class="panel-title">Dispatch Engine</h2>
+            
+            <div class="templates-label">Quick Templates:</div>
+            <div class="template-buttons">
+                <button type="button" class="btn-template" onclick="fillTemplate('webhook-success')">Webhook Success</button>
+                <button type="button" class="btn-template" onclick="fillTemplate('webhook-retry')">Webhook Retry</button>
+                <button type="button" class="btn-template" onclick="fillTemplate('email-success')">Email Success</button>
+                <button type="button" class="btn-template" onclick="fillTemplate('sms-fail')">SMS Fail DLQ</button>
+            </div>
+
+            <form id="notificationForm" onsubmit="submitNotification(event)">
+                <div class="form-group" style="margin-bottom: 1rem;">
+                    <label for="channelType">Channel Type</label>
+                    <select id="channelType" required onchange="handleChannelChange()">
+                        <option value="WEBHOOK">WEBHOOK</option>
+                        <option value="EMAIL">EMAIL</option>
+                        <option value="SMS">SMS</option>
+                    </select>
+                </div>
+
+                <div class="form-group" style="margin-bottom: 1rem;">
+                    <label for="recipient" id="recipientLabel">Webhook Endpoint URL</label>
+                    <input type="text" id="recipient" placeholder="http://localhost:8080/api/v1/mock-destination" required>
+                </div>
+
+                <div class="form-group" style="margin-bottom: 1rem;">
+                    <label for="payload">Message / JSON Payload</label>
+                    <textarea id="payload" placeholder='{"event":"order.placed","customer":"John Doe"}' required></textarea>
+                </div>
+
+                <button type="submit" class="btn-primary" id="btnSubmit">
+                    <span>Submit to Queue</span>
+                </button>
+            </form>
+        </section>
+
+        <!-- Right Column: Live Table Monitor -->
+        <section class="dashboard-container">
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th style="width: 50px;"></th>
+                            <th style="width: 60px;">ID</th>
+                            <th>Recipient</th>
+                            <th style="width: 110px;">Channel</th>
+                            <th>Payload</th>
+                            <th style="width: 120px;">Status</th>
+                            <th style="width: 80px; text-align: center;">Retries</th>
+                            <th>Timestamp</th>
+                        </tr>
+                    </thead>
+                    <tbody id="notificationsBody">
+                        <tr>
+                            <td colspan="8" class="empty-state">Loading transactions...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+
+    <!-- Success/Info Toast Alert -->
+    <div id="toast" class="toast-notification">
+        <span style="color: var(--accent-green); font-size: 1.25rem;">✔</span>
+        <div id="toastMessage">Notification queued successfully!</div>
+    </div>
+
+    <script>
+        const API_BASE = "/api/v1";
+        let polledIds = new Set();
+        let expandedRows = new Set(); // Track expanded rows by ID to keep them open during polling
+
+        // Quick template definitions
+        const templates = {
+            'webhook-success': {
+                channel: 'WEBHOOK',
+                recipient: 'http://localhost:8080/api/v1/mock-destination',
+                payload: '{\n  "event": "payment.processed",\n  "amount": 99.99,\n  "currency": "USD"\n}'
+            },
+            'webhook-retry': {
+                channel: 'WEBHOOK',
+                recipient: 'http://localhost:8080/api/v1/mock-destination?fail=true',
+                payload: '{\n  "event": "webhook.failed.attempt",\n  "details": "This will fail on mock target to trigger retry"\n}'
+            },
+            'email-success': {
+                channel: 'EMAIL',
+                recipient: 'user@domain.com',
+                payload: 'Hello John,\nYour weekly transactional statement is ready for download. Please access via the client portal.'
+            },
+            'sms-fail': {
+                channel: 'SMS',
+                recipient: '+1555-fail-number',
+                payload: 'Urgent: Your account credentials have been changed. If this was not you, contact assistance immediately.'
+            }
+        };
+
+        function fillTemplate(key) {
+            const temp = templates[key];
+            if (!temp) return;
+            
+            document.getElementById('channelType').value = temp.channel;
+            handleChannelChange();
+            document.getElementById('recipient').value = temp.recipient;
+            document.getElementById('payload').value = temp.payload;
+        }
+
+        function handleChannelChange() {
+            const channel = document.getElementById('channelType').value;
+            const label = document.getElementById('recipientLabel');
+            const recipient = document.getElementById('recipient');
+            
+            if (channel === 'WEBHOOK') {
+                label.innerText = "Webhook Endpoint URL";
+                recipient.placeholder = "http://localhost:8080/api/v1/mock-destination";
+            } else if (channel === 'EMAIL') {
+                label.innerText = "Recipient Email Address";
+                recipient.placeholder = "customer@domain.com";
+            } else {
+                label.innerText = "Recipient Phone Number";
+                recipient.placeholder = "+1 (555) 000-0000";
+            }
+        }
+
+        // Show Toast
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            document.getElementById('toastMessage').innerText = message;
+            toast.classList.add('show');
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 3000);
+        }
+
+        // Submit to API
+        async function submitNotification(event) {
+            event.preventDefault();
+            const btnSubmit = document.getElementById('btnSubmit');
+            btnSubmit.disabled = true;
+            btnSubmit.innerHTML = '<span>Queueing...</span>';
+
+            const payloadData = {
+                recipient: document.getElementById('recipient').value,
+                channelType: document.getElementById('channelType').value,
+                payload: document.getElementById('payload').value
+            };
+
+            try {
+                const response = await fetch(`${API_BASE}/notifications`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(payloadData)
+                });
+
+                if (response.status === 202) {
+                    const data = await response.json();
+                    showToast(`Notification Accepted! ID: ${data.id}`);
+                    document.getElementById('notificationForm').reset();
+                    handleChannelChange();
+                    // Fetch updates immediately
+                    fetchNotifications();
+                } else {
+                    alert(`Failed to submit notification. HTTP Status: ${response.status}`);
+                }
+            } catch (err) {
+                console.error("Submission error:", err);
+                alert("Network error: Could not reach the notification engine server");
+            } finally {
+                btnSubmit.disabled = false;
+                btnSubmit.innerHTML = '<span>Submit to Queue</span>';
+            }
+        }
+
+        // Fetch list of notifications
+        async function fetchNotifications() {
+            try {
+                const response = await fetch(`${API_BASE}/notifications`);
+                if (!response.ok) {
+                    throw new Error(`HTTP Error ${response.status}`);
+                }
+                const list = await response.json();
+                renderTable(list);
+            } catch (err) {
+                console.error("Polling error:", err);
+                // Mark connection status as offline
+                document.querySelector('.status-dot').style.backgroundColor = 'var(--accent-red)';
+                document.querySelector('.status-dot').style.boxShadow = '0 0 10px var(--accent-red)';
+                document.querySelector('.connection-status span:last-child').innerText = "Offline (Retry connecting...)";
+                return;
+            }
+            
+            // Online status style
+            document.querySelector('.status-dot').style.backgroundColor = 'var(--accent-green)';
+            document.querySelector('.status-dot').style.boxShadow = '0 0 10px var(--accent-green)';
+            document.querySelector('.connection-status span:last-child').innerText = "Auto-polling (3s)";
+        }
+
+        // Expand/Collapse logs row
+        function toggleRow(id) {
+            const detailsRow = document.getElementById(`details-${id}`);
+            const mainRow = document.getElementById(`row-${id}`);
+            
+            if (detailsRow.classList.contains('show')) {
+                detailsRow.classList.remove('show');
+                mainRow.classList.remove('expanded');
+                expandedRows.delete(id);
+            } else {
+                detailsRow.classList.add('show');
+                mainRow.classList.add('expanded');
+                expandedRows.add(id);
+            }
+        }
+
+        // Render data into table
+        function renderTable(list) {
+            const body = document.getElementById('notificationsBody');
+            if (list.length === 0) {
+                body.innerHTML = '<tr><td colspan="8" class="empty-state">No notification logs recorded in this session.</td></tr>';
+                return;
+            }
+
+            let html = "";
+            list.forEach(item => {
+                const isExpanded = expandedRows.has(item.id);
+                const hasLogs = item.deliveryLogs && item.deliveryLogs.length > 0;
+                
+                // Formulate status badge
+                let statusClass = "badge-pending";
+                if (item.status === 'DELIVERED') statusClass = "badge-delivered";
+                else if (item.status === 'RETRYING') statusClass = "badge-retrying";
+                else if (item.status === 'FAILED_DLQ') statusClass = "badge-failed_dlq";
+
+                // Format timestamp
+                const formattedTime = new Date(item.createdAt).toLocaleString();
+
+                html += `
+                    <tr id="row-${item.id}" class="row-main ${isExpanded ? 'expanded' : ''}" onclick="toggleRow(${item.id})">
+                        <td><span class="expand-icon">▶</span></td>
+                        <td><strong>#${item.id}</strong></td>
+                        <td class="recipient-cell" title="${escapeHtml(item.recipient)}">${escapeHtml(item.recipient)}</td>
+                        <td><span class="badge-channel">${item.channelType}</span></td>
+                        <td class="payload-cell" title="${escapeHtml(item.payload)}">${escapeHtml(item.payload)}</td>
+                        <td><span class="badge ${statusClass}">${item.status}</span></td>
+                        <td style="text-align: center; font-weight: 600;">${item.retryCount}</td>
+                        <td class="log-time">${formattedTime}</td>
+                    </tr>
+                    <tr id="details-${item.id}" class="row-details ${isExpanded ? 'show' : ''}">
+                        <td colspan="8">
+                            <div class="logs-container">
+                                <div class="logs-title">
+                                    <span>⚙</span> Execution Delivery Timeline &amp; HTTP Logs
+                                </div>
+                                <div class="log-timeline">
+                                    ${hasLogs ? renderLogs(item.deliveryLogs) : '<div style="color: var(--text-muted); font-size: 0.8rem;">No delivery attempts logged yet. Waiting for worker execution...</div>'}
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            });
+            body.innerHTML = html;
+        }
+
+        // Render nested logs list
+        function renderLogs(logs) {
+            return logs.map(log => {
+                const isSuccess = log.httpStatusCode >= 200 && log.httpStatusCode < 300;
+                const formattedTime = new Date(log.timestamp).toLocaleString();
+                return `
+                    <div class="log-item">
+                        <div class="log-meta">
+                            <span class="log-attempt">Attempt #${log.attemptNumber}</span>
+                            <span>
+                                Response Code: 
+                                <span class="log-status ${isSuccess ? 'success' : 'fail'}">${log.httpStatusCode}</span>
+                            </span>
+                            <span class="log-time">${formattedTime}</span>
+                        </div>
+                        <div class="log-body">${escapeHtml(log.responseBody || 'Empty payload response')}</div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Basic escape function to prevent HTML injection in details view
+        function escapeHtml(str) {
+            if (!str) return '';
+            return str
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+
+        // Page setup
+        window.addEventListener('DOMContentLoaded', () => {
+            // Fill default template to begin with
+            fillTemplate('webhook-success');
+            
+            // Initial fetch
+            fetchNotifications();
+            
+            // Start Auto Polling
+            setInterval(fetchNotifications, 3000);
+        });
+    </script>
+</body>
+</html>
